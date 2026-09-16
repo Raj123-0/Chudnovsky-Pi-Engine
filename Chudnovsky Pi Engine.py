@@ -14,18 +14,23 @@ Chunking Strategy & Parallelization:
   Each chunk is evaluated independently via a 12-worker multiprocessing.Pool, returning 
   compact (P, Q, T) integer triples to minimize IPC serialization overhead.
 """
+from __future__ import annotations
 
-import sys
-import math
-import time
 import argparse
-import multiprocessing as mp
+import functools
 import gc
+import math
+import multiprocessing as mp
 import os
+import sys
+import time
+
+from gmpy2 import mpz, isqrt
+import gmpy2
+
+
 
 os.environ['MPMATH_GMPY2'] = '1'
-import gmpy2
-from gmpy2 import mpz, isqrt
 
 sys.set_int_max_str_digits(0)
 
@@ -36,7 +41,9 @@ C3_OVER_24 = mpz(C)**3 // 24 # 10939058860032000
 A = mpz(13591409)
 B = mpz(545140134)
 
-def bs_chudnovsky_range(a, b):
+
+@functools.lru_cache(maxsize=None)
+def bs_chudnovsky_range(a, b) -> tuple:
     """Binary splitting over interval [a, b)."""
     if b - a == 1:
         if a == 0:
@@ -60,10 +67,12 @@ def bs_chudnovsky_range(a, b):
     T = T1 * Q2 + P1 * T2
     return P, Q, T
 
-def worker_chunk(args):
+
+def worker_chunk(args) -> Any:
     """Worker task evaluating a specific mathematical chunk."""
     a, b = args
     return bs_chudnovsky_range(a, b)
+
 
 def save_oeis_files(constant_name, digits_str, target_digits):
     """Saves raw digit string and OEIS b-file format."""
@@ -82,8 +91,18 @@ def save_oeis_files(constant_name, digits_str, target_digits):
             f.write(f"{idx} {digit}\n")
     print(f"Saved OEIS b-file output to {b_filename}")
 
-def compute_pi_hpc(target_digits):
+
+def compute_pi_hpc(target_digits) -> Any:
     # Safety margin of +50 digits to prevent rounding drift
+    """Compute pi hpc using optimized algorithms.
+    
+    Args:
+        target_digits:
+    
+    Returns:
+        Any: The computed result
+    
+    """
     dps_working = target_digits + 50
     terms = int(math.ceil(dps_working / 14.18164742394)) + 2
 
@@ -102,7 +121,8 @@ def compute_pi_hpc(target_digits):
 
     # Main process aggregation
     P, Q, T = results[0]
-    for P_next, Q_next, T_next in results[1:]:
+    for P_next, Q_next, T_next in results[1:
+        ]:
         P = P * P_next
         Q = Q * Q_next
         T = T * Q_next + P * T_next
@@ -130,7 +150,11 @@ def compute_pi_hpc(target_digits):
     save_oeis_files("Pi", pi_truncated, target_digits)
     return pi_truncated
 
+
 def main():
+    """Entry point — parse arguments and run the main computation.
+    
+    """
     parser = argparse.ArgumentParser(description="HPC Pi OEIS Calculator")
     parser.add_argument("-n", "--digits", type=int, default=1000, help="Target digits (default: 1000)")
     args = parser.parse_args()
