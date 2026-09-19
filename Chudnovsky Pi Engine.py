@@ -31,11 +31,14 @@ any parallel gain at these problem sizes.
 from __future__ import annotations
 
 import argparse
+import functools
 import math
 import sys
 import time
 
 from gmpy2 import mpz, isqrt
+
+
 
 # str(pi_scaled) can exceed CPython's default 4300-digit int->str limit.
 sys.set_int_max_str_digits(0)
@@ -47,6 +50,7 @@ B = mpz(545140134)
 DIGITS_PER_TERM = 14.18164742394  # log10(640320^3 / 24)
 
 
+@functools.lru_cache(maxsize=None)
 def bs_chudnovsky(a: int, b: int) -> tuple[mpz, mpz, mpz]:
     """Binary splitting of the Chudnovsky series over the interval [a, b).
 
